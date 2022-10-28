@@ -8,14 +8,12 @@ app = Flask(__name__)
 
 
 
-
-# flask route
-
 # get em all
 @app.get("/store")
 def get_stores():
     # have to convert to a list here
     return {"stores": list(stores.values())}
+
 
 #data for 1 store
 @app.get("/store/<string:store_id>")
@@ -25,22 +23,6 @@ def get_store(store_id):
     except KeyError:
         abort(404,message="Store not found")
         # return {"message":"Store not found"}, 404
-
-
-
-
-# retrieve a single item
-@app.get("/item/<string:item_id>")
-def get_item(item_id):
-    try:
-        return items[item_id]
-    except KeyError:
-        abort(404,message="Item not found")
-        # return {"message":"Item not found"}, 404
-
-        
-
-
 
 
 @app.post("/store")
@@ -66,6 +48,39 @@ def create_store():
 
 
 
+# delete a store
+@app.delete("/store/<string:store_id>")
+def delete_store(store_id):
+    try:
+        del stores[store_id]
+        return {"message":"Store deleted"}
+    except KeyError:
+        abort(404,message="Store not found")
+
+
+
+
+# retrieve a single item
+@app.get("/item/<string:item_id>")
+def get_item(item_id):
+    try:
+        return items[item_id]
+    except KeyError:
+        abort(404,message="Item not found")
+        # return {"message":"Item not found"}, 404
+
+# delete a single item
+@app.delete("/item/<string:item_id>")
+def delete_item(item_id):
+    try:
+        del items[item_id]
+        return {"message":"Item deleted"}
+    except KeyError:
+        abort(404,message="Item not found")
+
+
+
+
 @app.post("/item")
 def create_item():
     item_data = request.get_json()
@@ -77,16 +92,12 @@ def create_item():
         abort(400, message = "Bad request.  Ensure 'price', 'store_id', and 'name' are included in the JSON payload.")
 
     # check to seee if the item already exists:
-    for item in item.values():
+    for item in items.values():
         if (item_data["name"] == item["name"] and item_data["store_id"] == item["store_id"]):
             abort(400, message=f"Item already exists.")
-
-
     if item_data["store_id"] not in stores:
         abort(404,message="Store not found")
-        # return {"message": "Store not found"}, 404
 
-    # assume we have received the expected payload
     item_id = uuid.uuid4().hex
     item = {**item_data, "id":item_id}
     items[item_id] = item
@@ -97,4 +108,20 @@ def create_item():
 def get_all_items():
     # have to convert to a list here
     return {"items": list(items.values())}
+
+@app.put("/item/<string:item_id>")
+def update_item(item_id):
+    item_data = request.get_json()
+    if "price" not in item_data or "name" not in item_data:
+        abort(404,message="price and name must both be present.")
+
+    try:
+        #load existing item into new dict called item 
+        item = items[item_id]
+        # dictionary merge - i guess both ways...
+        item |= item_data
+
+        return item
+    except KeyError:
+        abort(404,message="item not found")
 
